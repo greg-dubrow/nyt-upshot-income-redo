@@ -49,27 +49,35 @@ library(janitor)
 source("~/Data/r/basic functions.R")
 options(scipen=10000)
 
-# get cpi data
-cpivals1 <- blscrapeR::inflation_adjust("1980-01-01") %>%
-  arrange(desc(date))
+# removes STRATA = 1 that stops sample operations!
+options(survey.lonely.psu="remove")
 
-cpivals <- cpivals1 %>%
-  group_by(year) %>%
-  mutate(avg_cpi = round(mean(value), 1)) %>%
-  ungroup() %>%
-  distinct(year, avg_cpi) %>%
-  filter(year %in% c(1980, 1990, 2000, 2010, 2021, 2022)) %>%
-  pivot_wider(names_from = year,
-              names_glue = "avg_cpi_{year}",
-              values_from = avg_cpi)
+# get cpi data
+cpivals <- readRDS("~/Data/r/nyt-upshot-income-redo/data/cpivals.rds")
+
+# cpivals1 <- blscrapeR::inflation_adjust("1980-01-01") %>%
+#   arrange(desc(date))
+#
+# cpivals <- cpivals1 %>%
+#   group_by(year) %>%
+#   mutate(avg_cpi = round(mean(value), 1)) %>%
+#   ungroup() %>%
+#   distinct(year, avg_cpi) %>%
+#   filter(year %in% c(1980, 1990, 2000, 2010, 2021, 2022)) %>%
+#   pivot_wider(names_from = year,
+#               names_glue = "avg_cpi_{year}",
+#               values_from = avg_cpi)
+#
+# saveRDS(cpivals, file = "~/Data/r/nyt-upshot-income-redo/data/cpivals.rds")
 
 
 # census metadata
-nytddi <- read_ipums_ddi("data/usa_00005.xml")
-names(nytddi)
+nytddi5 <- read_ipums_ddi("data/usa_00005.xml")
+names(nytddi5)
 
 # census data raw file
-nytdata1 <- read_ipums_micro(nytddi) %>%
+# again, the 1% 1980, 1990 & 2000 samples and single year ACS in 2010, 2021, 2022
+nytdata1 <- read_ipums_micro(nytddi5) %>%
   filter(LABFORCE == 2) %>%
   filter(between(AGE, 18, 67)) %>%
   filter(PERWT >0)
@@ -77,9 +85,34 @@ nytdata1 <- read_ipums_micro(nytddi) %>%
 glimpse(nytdata1)
 
 nytdata1 %>%
+  count(YEAR)
+
+# test unweighted & weighted means
+nytdata1 %>%
+  filter(between(INCWAGE, 1, 50000)) %>%
+  group_by(SEX, RACE) %>%
+  summarize(
+    total_pop = n(),
+    total_pop_wt = sum(PERWT),
+    inc_avg = mean(INCWAGE),
+    inc_avg_w = weighted.mean(INCWAGE, PERWT))
+
+
+nytdata1 %>%
   filter(YEAR == 1980) %>%
   count(INCWAGE) %>%
   view()
+
+nytdata1 %>%
+  group_by(YEAR, STRATA) %>%
+  summarise(CNT = n()) %>%
+  view()
+
+nytdata1 %>%
+  filter(YEAR == 2000) %>%
+  as_survey_design(cluster = CLUSTER, strata = STRATA, weights = PERWT) %>%
+  srvyr::summarise(poptot = survey_total())
+
 
 nytdata1 %>%
   filter(YEAR == 1980) %>%
@@ -89,14 +122,14 @@ nytdata1 %>%
   mutate(INCWAGE = ifelse(INCFARM == 999999, NA, INCFARM)) %>%
   mutate(INCWAGE = ifelse(INCBUS == 999999, NA, INCBUS)) %>%
   mutate(incearn1 = INCWAGE + INCBUS + INCFARM) %>%
-   filter(incearn1 > 0) %>%
+ filter(incearn1 > 0) %>%
   # mutate(incwage = as.numeric(INCWAGE)) %>%
 #  summarise(inc_med = median(incwage))
   as_survey_design(cluster = CLUSTER, strata = STRATA, weights = PERWT) %>%
   srvyr::summarise(poptot = survey_total(),
                    inc_med = survey_median(incearn1, na.rm = TRUE))
 
-# no filters 9665 25.5
+# all filters 6,357,200 16510 148
 
 nytdata1 %>%
   count(RACED) %>%
@@ -127,12 +160,17 @@ nytdata1 %>%
 nytdata <- nytdata1 %>%
   as_tibble() %>%
   select(-LABFORCE) %>%
+  # remove strata < 2 to elimintate sampling error
+  # group_by(YEAR, STRATA) %>%
+  # mutate(CNT = n()) %>%
+  # filter(CNT > 1) %>%
+  # ungroup() %>%
   # add cpi data
   cbind(cpivals) %>%
   # construct income variable to measure
   mutate(INCWAGE = ifelse(INCWAGE == 999999, NA, INCWAGE)) %>%
-  mutate(INCWAGE = ifelse(INCFARM == 999999, NA, INCFARM)) %>%
-  mutate(INCWAGE = ifelse(INCBUS == 999999, NA, INCBUS)) %>%
+  mutate(INCFARM = ifelse(INCFARM == 999999, NA, INCFARM)) %>%
+  mutate(INCBUS = ifelse(INCBUS == 999999, NA, INCBUS)) %>%
   mutate(incearn1 = INCWAGE + INCBUS + INCFARM) %>%
   mutate(incearn = ifelse(YEAR == 1980, incearn1, INCEARN)) %>%
   select(-incearn1) %>%
@@ -181,19 +219,69 @@ nytdata <- nytdata1 %>%
                           levels = c("No schooling", "No HS Diploma",
                                      "HS Diploma", "Some college no deg", "Associate deg", "BA/BS",
                                      "Masters", "Professional", "Doctoral", "NA"))) %>%
-  select(YEAR:UHRSWORK, incearn:ed_cat2)
+  mutate(bachelor_deg = ifelse(ed_cat1 == "BA/BS+", "Yes", "No")) %>%
+  select(YEAR:UHRSWORK, incearn:bachelor_deg)
 
 
 glimpse(nytdata)
 
 nytdata %>%
-  filter(YEAR == 1980) %>%
-  summarise(tot_pop = sum(PERWT), n_resp = n())
+  count(bachelor_deg, ed_cat1)
 
-nytdata80_des <- nytdata %>%
+nytdata %>%
+  filter(YEAR == 1990) %>%
+  as_survey_design(cluster = CLUSTER, strata = STRATA, weights = PERWT) %>%
+  srvyr::summarise(poptot = survey_total(),
+                   inc_med = survey_median(incearn, na.rm = TRUE))
+
+nytdata %>%
+  filter(YEAR == 1990) %>%
+  filter(WKSWORK2 > 3) %>%
+  filter(UHRSWORK >= 30) %>%
+  filter(incearn > 0) %>%
+  group_by(SEX, eth_cat) %>%
+  summarize(
+    total_pop = n(),
+    total_pop_wt = sum(PERWT),
+    inc_avg = mean(incearn),
+    inc_avg_w = weighted.mean(incearn, PERWT),
+    inc_med = median(incearn))
+
+
+nytdata %>%
   filter(YEAR == 1980) %>%
-#  select(YEAR, CLUSTER, STRATA, PERWT, incearn_2022, eth_cat) %>%
-  as_survey_design(cluster = CLUSTER, strata = STRATA, weights = PERWT)
+  filter(WKSWORK2 > 3) %>%
+  filter(UHRSWORK >= 30) %>%
+  filter(incearn > 0) %>%
+  group_by(SEX, eth_cat, ed_cat1) %>%
+  mutate(CNT = n()) %>%
+  # removes any cells < 5
+  filter(CNT > 4) %>%
+   # summarise(n = n()) %>%
+   # view()
+  # summarise(poptot = n(),
+  #           inc_med = median(incearn))
+  as_survey_design(cluster = CLUSTER, strata = STRATA, weights = PERWT) %>%
+  srvyr::summarise(poptot = survey_total(),
+                   inc_med = survey_median(incearn, na.rm = TRUE),) %>%
+  select(-poptot_se, -inc_med_se) %>%
+  view()
+
+nytdata %>%
+  filter(YEAR == 1990) %>%
+  filter(WKSWORK2 > 3) %>%
+  filter(UHRSWORK >= 30) %>%
+  filter(incearn > 0) %>%
+  group_by(SEX, eth_cat) %>%
+#  filter(!STRATA %in% c(35, 119)) %>%
+  # summarise(poptot = n(),
+  #           inc_med = median(incearn))
+  as_survey_design(cluster = CLUSTER, strata = STRATA, weights = PERWT) %>%
+  srvyr::summarise(poptot = survey_total(),
+                   inc_med = survey_median(incearn, na.rm = TRUE,
+                                           vartype = c("se", "ci", "var", "cv"))) %>%
+  view()
+
 
 nytdata %>%
   filter(YEAR == 1980) %>%
@@ -209,10 +297,6 @@ nytdata %>%
 
 
 
-nytdata80_des %>%
-  group_by(ed_cat1) %>%
-  srvyr::summarise(inc_med = survey_median(incearn, na.rm = TRUE),
-                   inc_med_adj = survey_median(incearn_2022, na.rm = TRUE))
 
 
 nytdata %>%

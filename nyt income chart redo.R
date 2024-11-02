@@ -30,6 +30,8 @@ library(janitor)
 
 source("~/Data/r/basic functions.R")
 options(scipen=10000)
+# removes STRATA = 1 that stops sample operations!
+options(survey.lonely.psu="remove")
 
 
 # metadata

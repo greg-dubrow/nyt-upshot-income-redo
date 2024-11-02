@@ -23,3 +23,10 @@ knitr::opts_chunk$set(
   out.width = "100%") 
 ```
 
+This was something I thought I could turn around fairly quickly
+
+Stumbling blocks
+
+Not fully understanding census file structure and using survyr
+lonely PSU error and fix
+1% file from 2010 too large to turn into survey set when weighted
