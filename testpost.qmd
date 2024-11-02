@@ -30,3 +30,6 @@ Stumbling blocks
 Not fully understanding census file structure and using survyr
 lonely PSU error and fix
 1% file from 2010 too large to turn into survey set when weighted
+
+
+wrote functions

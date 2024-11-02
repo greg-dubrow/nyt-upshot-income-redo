@@ -58,9 +58,19 @@ censuscheck1 %>%
 censuscheck1 %>%
   count(YEAR)
 
-census_des <- censuscheck1 %>%
+censuscheck1 %>%
   filter(YEAR == 2010) %>%
-  select(YEAR, CLUSTER, STRATA, PERWT, GQ, PERNUM, INCEARN) %>%
+  mutate(sex = ifelse(SEX == 1, "Male", "Female")) %>%
+  mutate(eth_cat = case_when((RACED %in% c(100,110) & HISPAND == 0) ~ "White",
+                             (RACED == 200 & HISPAN == 0) ~ "African American",
+                             (between(RACED, 300, 399) & HISPAND == 0) ~ "Native American",
+                             (between(RACED, 400, 600) & HISPAND == 0) ~ "Asian/PI",
+                             (between(RACED, 861, 893) & HISPAND == 0) ~ "Asian/PI",
+                             (RACED %in% c(943, 944) & HISPAND == 0) ~ "Asian/PI",
+                             (RACED == 976 & HISPAND == 0) ~ "Asian/PI",
+                             HISPAND >=100 ~ "Hispanic/Latino",
+                             TRUE ~ "Other/Multi")) %>%
+#  select(YEAR, CLUSTER, STRATA, PERWT, GQ, PERNUM, INCEARN) %>%
   # count(INCEARN) %>%
   # view()
     # for 1980 only use derived vqr, after that use INCEARN
@@ -71,10 +81,10 @@ census_des <- censuscheck1 %>%
   # after 1980
   mutate(incearn1 = as.numeric(INCEARN)) %>%
   select(-INCEARN) %>%
+  filter(sex == "Female") %>%
+  group_by(eth_cat) %>%
 #  group_by(SEX) %>%
-  as_survey_design(cluster = CLUSTER, strata = STRATA, weights = PERWT)
-
-census_des %>%
+  as_survey_design(cluster = CLUSTER, strata = STRATA, weights = PERWT) %>%
   srvyr::summarise(poptot = survey_total(),
                    inc_med = survey_median(incearn1, na.rm = TRUE))
 
@@ -88,6 +98,7 @@ censuscheck1dt <- data.table(censuscheck1) %>%
   # mutate(incfarm = as.numeric(ifelse(INCFARM == 999999, NA, INCFARM))) %>%
   # mutate(incbus = as.numeric(ifelse(INCBUS == 999999, NA, INCBUS))) %>%
   # mutate(incearn1 = incwage + incfarm + incbus)
+  mutate(sex = ifelse(SEX == 1, "Male", "Female")) %>%
   mutate(incearn1 = as.numeric(INCEARN))
 
 censuscheck1dt %>%
@@ -101,7 +112,9 @@ dt_design <- survey::svydesign(
   weights = ~PERWT
 )
 
+census90_means
 survey::svyquantile(~incearn1, dt_design, quantile=c(0.5), ci=TRUE, se=ci)
+survey::svyquantile(~incearn1+sex, dt_design, quantile=c(0.5), ci=TRUE, se=ci)
 survey::svytotal(~ctid, dt_design)
 
 # 1980
