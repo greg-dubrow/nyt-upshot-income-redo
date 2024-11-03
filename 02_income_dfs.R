@@ -3,6 +3,13 @@
 
 glimpse(nytredo_1980)
 
+pop_income_curr(nytredo_1980, "1980")
+
+nytredo_2010 %>%
+  group_by(sex, eth_cat, ed_cat1) %>%
+  summarise(incd_med = median(incearn)) %>%
+  view()
+
 ## current dollars
 pop_income_curr(nytredo_1980, "1980", c(sex, eth_cat, ed_cat1))
 pop_income_curr(nytredo_1990, "1990", c(sex, eth_cat, ed_cat1))
