@@ -1,5 +1,17 @@
+Two posts?
 
-ed attain by sex as pct of sex
+1) my experience with ipums and srvyr, working with large census datasets, testing 5% samples v 1% samples,
+tricks and tips (eg setting lonely PSU to ignore)
+
+2) scrollytelling entry (see description below)
+
+
+## charts, tables, other ideas
+
+ed attain by sex as pct of sex. or percent of all workforce and women for ed attain and sex
+
+income
+
 
 # weeks worked
 
@@ -12,9 +24,14 @@ faceted bar charts? earch
 facted line charts? x axis is year, lines for men & women, facet by eth & ed cats
 
 
-# income
-
 scrollytelling
+https://closeread.netlify.app/guide/
+https://github.com/qmd-lab/closeread#readme
+
+install into working directory
+quarto add qmd-lab/closeread
+
+https://posit.co/blog/closeread-prize-announcement/
 
 Start with current, constant & indexed lines of white men no ba/bs
 

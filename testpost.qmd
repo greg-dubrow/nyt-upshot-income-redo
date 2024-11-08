@@ -23,6 +23,10 @@ knitr::opts_chunk$set(
   out.width = "100%") 
 ```
 
+When I read the October 26 NY Times Upshot story detailing the decreasing earnings of white men without college degrees, like many other data visualization professionals and social science-trained data analysts I...had some issues.
+
+First being that they used average wages, and not median. Second was the exclusion of some ethnic groups. And this isn't even mentioning the somewhat tired trope of framing support of Trump in terms of economic anxiety.
+
 This was something I thought I could turn around fairly quickly
 
 Stumbling blocks

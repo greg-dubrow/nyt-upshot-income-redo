@@ -1,0 +1,30 @@
+---
+title: "Who Makes How Much?"
+description: "Making a Better Income by Education Chart"
+author: "gregers kjerulf dubrow"
+date: '2024-10-31'
+categories: [post, rstats, ipums, census, ggplot]
+image: "groupamastadium_nov2022.jpg"
+format: closeread-html
+    link-external-newwindow: true
+toc: true
+lightbox: true
+editor: 
+  mode: source
+---
+
+Hello World! Please read my Closeread story below.
+
+:::{.cr-section}
+
+Closeread enables scrollytelling.
+
+Draw your readers attention with focus effects. @cr-features
+
+:::{#cr-features}
+1. Highlighting
+2. Zooming
+3. Panning
+:::
+
+:::
